@@ -8,11 +8,10 @@ from torchvision import datasets, transforms
 import pandas as pd
 import sklearn as sk
 from PIL import Image
-import os
+import os, sys
 import cv2
 from tqdm import tqdm
 import seaborn as sns
-import dropbox
 
 
 
@@ -57,6 +56,8 @@ class CustomImageDataset(Dataset):
         image = Image.open(img_path).convert("RGB")
         mask = Image.open(mask_path).convert("L")  # Assuming masks are in grayscale
 
+        # Image.open(os.path.join(self.masks_dir, self.mask_files[idx])).convert("L")
+
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
@@ -67,27 +68,43 @@ class CustomImageDataset(Dataset):
 
 
 
-path_data = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data2/images/"
-path_masks = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data2/annotations/"
+path_data = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/images/"
+path_masks = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/annotations/"
 
-img = Image.open(path_masks+"10.png").convert('L')
+img = Image.open(path_masks+"117.png").convert('L')
 img.show() #not working for png files rn unless you use convert('L')
 
-img = Image.open(path_data+"10.tif").convert('RGB')
-img.show() #not working for png files rn unless you use convert('L')
+
+# img = Image.open(path_data+"10.tif").convert('RGB')
+# img.show() #not working for png files rn unless you use convert('L')
+
 
 image_transforms = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
+
+
 class ToLabel:
+    def __init__(self, label_mappings):
+        self.label_mapping = label_mappings
+
     def __call__(self, pic):
-        return torch.from_numpy(np.array(pic, dtype=np.int32)).long() #delete long?
+        label_array = np.array(pic, dtype= np.int32)
+        for k, v in self.label_mapping.items():
+            label_array[label_array == v] = k
+        return torch.from_numpy(label_array).long() #delete long?
+    
+label_mapping = {0: 0, 1: 150, 2: 76}
 
 mask_transforms = transforms.Compose([
-    transforms.ToTensor(),
-    ToLabel()
+    # transforms.ToTensor(), # commented this out but now i  have index 150 out of range, try one hot encoding
+    ToLabel(label_mapping)
 ])
+
+transform = mask_transforms(img)
+print(f"uniques are {torch.unique(transform)}")
+
 
 dataset = CustomImageDataset(path_data, path_masks, transform=image_transforms, target_transform=mask_transforms)
 
@@ -110,16 +127,16 @@ model = torch.hub.load('pytorch/vision:v0.10.0', 'fcn_resnet50', pretrained=True
 
 # model.eval()
 #model = FCN(pretrained=True)  # Load pre-trained model
-print(model)
+# print(model)
 # Modify the last layer of the model to match the number of classes in your dataset
-num_classes = 2  # Number of classes in your dataset
+num_classes = 3 # Number of classes in your dataset
 model.classifier[4] = nn.Conv2d(512, num_classes, kernel_size=1)
 model = model.to(device)
 
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-num_epochs = 1
+num_epochs = 3
 
 def calculate_iou(y_pred, y_real, classes):
     ious = []
@@ -163,6 +180,8 @@ for epoch in tqdm(range(num_epochs)):
     for inputs, labels in train_loader:
         inputs, labels = inputs.to(device), labels.to(device)
         print(f"Input shape: {inputs.shape}, Label shape: {labels.shape}")
+        print(f"Unique values in label: {torch.unique(labels)}") #issue is here
+
 
         optimizer.zero_grad()
         outputs = model(inputs)['out'] #you added out and 0, just took out 0
