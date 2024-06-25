@@ -75,8 +75,8 @@ img = Image.open(path_masks+"117.png").convert('L')
 img.show() #not working for png files rn unless you use convert('L')
 
 
-# img = Image.open(path_data+"10.tif").convert('RGB')
-# img.show() #not working for png files rn unless you use convert('L')
+img = Image.open(path_data+"117.tif").convert('RGB')
+img.show() #not working for png files rn unless you use convert('L')
 
 
 image_transforms = transforms.Compose([
@@ -95,7 +95,7 @@ class ToLabel:
             label_array[label_array == v] = k
         return torch.from_numpy(label_array).long() #delete long?
     
-label_mapping = {0: 0, 1: 150, 2: 76}
+label_mapping = {0: 0, 1: 150, 2: 76} # darker is BE, lighter or whiter is healthy
 
 mask_transforms = transforms.Compose([
     # transforms.ToTensor(), # commented this out but now i  have index 150 out of range, try one hot encoding
