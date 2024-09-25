@@ -21,6 +21,7 @@ class CustomImageDataset(Dataset):
         self.masks_dir = masks_dir
         self.transform = transform
         self.target_transform = target_transform
+        
         self.image_files = sorted(os.listdir(images_dir))
         self.mask_files = [f for f in sorted(os.listdir(masks_dir)) if f.endswith(('.png'))]
 
@@ -56,18 +57,19 @@ class ToLabel:
 path_data = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/images/"
 path_masks = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/annotations/"
 
-# img = Image.open(path_masks+"11.png").convert('L')
-# img.show() #not working for png files rn unless you use convert('L')
+msk = Image.open(path_masks+"11.png").convert('L')
+msk.show() #not working for png files rn unless you use convert('L')
 
-# img = Image.open(path_data+"11.tif").convert('RGB')
-# img.show() #not working for png files rn unless you use convert('L')
+img = Image.open(path_data+"11.tif").convert('RGB')
+img.show() #not working for png files rn unless you use convert('L')
 def normalize_im(images, masks):
     pass
 
 
 image_transforms = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    # transforms.Lambda(lambda x: x * 255.0),  # Scale to [0, 255] from [0, 1]
 ])
 
 label_mapping = {0: 0, 1: 150, 2: 76} # darker is BE, lighter or whiter is healthy
@@ -77,8 +79,10 @@ mask_transforms = transforms.Compose([
     ToLabel(label_mapping)
 ])
 
-# transform = mask_transforms(img)
-# print(f"uniques are {torch.unique(transform)}")
+transform = mask_transforms(msk)
+print(f"uniques are {torch.unique(transform)}")
+transform_img = image_transforms(img)
+print(f"uniques are {torch.unique(transform_img)}")
 
 
 dataset = CustomImageDataset(path_data, path_masks, transform=image_transforms, target_transform=mask_transforms)
