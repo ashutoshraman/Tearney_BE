@@ -16,7 +16,7 @@ def square_crop_img(img, scale):
         new_img = img[round(left_x):round(right_x), round(bottom_y):round(top_y)]
     return new_img
 
-def downscale_img(image, x, y): #not correct, errors out
+def downscale_img(image, x, y): #must be in (H, W, C) format, cannot be (C, H, W) so convert with transpose.(1, 2, 0)
     img_resized = cv2.resize(image, (0, 0), fx=x, fy=y, interpolation=cv2.INTER_LANCZOS4)
     return img_resized
 
