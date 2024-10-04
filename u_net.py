@@ -21,7 +21,7 @@ class CustomImageDataset(Dataset):
         self.masks_dir = masks_dir
         self.transform = transform
         self.target_transform = target_transform
-        
+
         self.image_files = sorted(os.listdir(images_dir))
         self.mask_files = [f for f in sorted(os.listdir(masks_dir)) if f.endswith(('.png'))]
 
@@ -57,10 +57,10 @@ class ToLabel:
 path_data = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/images/"
 path_masks = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/annotations/"
 
-msk = Image.open(path_masks+"11.png").convert('L')
+msk = Image.open(path_masks+"109.png").convert('L')
 msk.show() #not working for png files rn unless you use convert('L')
 
-img = Image.open(path_data+"11.tif").convert('RGB')
+img = Image.open(path_data+"109.tif").convert('RGB')
 img.show() #not working for png files rn unless you use convert('L')
 def normalize_im(images, masks):
     pass

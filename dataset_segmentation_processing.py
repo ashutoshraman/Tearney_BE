@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 import cv2
+import torch
 
 
 
@@ -42,8 +43,34 @@ def split_pic(img, hor_split, vert_split): # in H, W, C format
     return tiles
 
 
-def fold_batch(img, fold_ratio):
-    pass
+def fold_batch(img, fold_ratio): # C, H, W format, only necessary for images and not masks
+    img_folded = None
+    if fold_ratio == 1:
+        return img
+    for i in range(fold_ratio):
+        for j in range(fold_ratio):
+            try:
+                img_subsample = img[:, i::fold_ratio, j::fold_ratio]
+                if img_folded is not None:
+                    img_folded = torch.cat((torch.tensor(img_folded), torch.tensor(img_subsample)), dim=0)
+                else:
+                    img_folded = img_subsample
+            except IndexError:
+                img_subsample = img[i::fold_ratio, j::fold_ratio]
+                if img_folded is not None:
+                    img_folded = torch.cat((img_folded, img_subsample), dim=0)
+                else:
+                    img_folded = img_subsample
+
+    return img_folded
+
+def unfold_prediction(folded_pred, fold_ratio): #do this to unfold data after evaluation in model so you can compare with unfolded mask prediction, dont fold mask prior to putting in model
+    b, c, h, w = folded_pred.shape
+    unfolded_pred = torch.zeros(b, c // (fold_ratio * fold_ratio), h * fold_ratio, w * fold_ratio)
+    for i in range(fold_ratio):
+        for j in range(fold_ratio):
+            unfolded_pred[:, :, i::fold_ratio, j::fold_ratio] = folded_pred[:, (i*fold_ratio+j)::fold_ratio*fold_ratio, :, :]
+    return unfolded_pred
 
 def image_driver(path_data, path_masks, num, scale, fx, fy):
     img = Image.open(path_data + str(num) + '.tif').convert('RGB')
@@ -78,21 +105,23 @@ def image_driver(path_data, path_masks, num, scale, fx, fy):
     split_imgs = split_pic(ds_img, 2, 2)
     split_msks = split_pic(ds_msk, 2, 2)
 
-    for i in range(len(split_imgs)):
-        Image.fromarray(split_imgs[i].astype('uint8'), 'RGB').show()
-        Image.fromarray(split_msks[i].astype('uint8'), 'L').show()
+    # for i in range(len(split_imgs)):
+    #     Image.fromarray(split_imgs[i].astype('uint8'), 'RGB').show()
+    #     Image.fromarray(split_msks[i].astype('uint8'), 'L').show()
 
-   
+    print(ds_img.shape)
     
+    final_imgs = fold_batch(ds_img.transpose(2, 0, 1), 2)
+    print(final_imgs.shape)
 
 
-    return
+    return final_imgs, ds_msk
 
 
 
 path_datas = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/images/"
 path_mask = "/Users/ashutoshraman/Documents/repos/Tearney_BE/raw_data/annotations/"
 
-image_driver(path_datas, path_mask, 109, .85, .5, .5)
+image_driver(path_datas, path_mask, 109, .8, .5, .5)
 
 
